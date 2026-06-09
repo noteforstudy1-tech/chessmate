@@ -34,7 +34,14 @@ export const STATUS = {
   ERROR: 'error',
 };
 
+// When running locally the Express backend handles room codes.
+// On GitHub Pages (no backend) we skip the backend and use the
+// PeerJS peer ID directly as the room code.
 const SIGNALING_BASE = '/api';
+const USE_BACKEND = import.meta.env.VITE_USE_BACKEND !== 'false'
+  && typeof window !== 'undefined'
+  && !window.location.hostname.endsWith('github.io');
+
 const INITIAL_TIME_MS = 10 * 60 * 1000; // 10 minutes per player
 
 // ─── Hook ─────────────────────────────────────────────────────────────────────
@@ -374,18 +381,30 @@ export function useWebRTCChess() {
     try {
       const peerId = await initPeer();
 
-      // Register with signaling server
-      const res = await fetch(`${SIGNALING_BASE}/create-room`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ peerId }),
-      });
-      if (!res.ok) throw new Error('Failed to create room on server');
-      const { roomCode: code } = await res.json();
+      let code;
+      if (USE_BACKEND) {
+        // Local dev: register with Express signaling server
+        const res = await fetch(`${SIGNALING_BASE}/create-room`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ peerId }),
+        });
+        if (!res.ok) throw new Error('Failed to create room on server');
+        ({ roomCode: code } = await res.json());
+      } else {
+        // GitHub Pages / no backend: peer ID IS the room code
+        // Show first 6 uppercase alphanumeric chars for readability
+        code = peerId.replace(/[^A-Z0-9]/gi, '').slice(0, 6).toUpperCase()
+          || peerId.slice(0, 6).toUpperCase();
+        // Store full peerId so joiner can look it up
+        // We encode it: roomCode=shortCode, but joiner gets full peerId via URL share
+        // Simplest approach: room code = full peerId (user copies it)
+        code = peerId; // joiner pastes the full peer ID
+      }
 
       setRoomCode(code);
       setPlayerRole('white');
-      playerRoleRef.current = 'white'; // set ref immediately (don't wait for useEffect)
+      playerRoleRef.current = 'white';
       setConnectionStatus(STATUS.WAITING);
       setStatusMessage('Waiting for opponent to join...');
 
@@ -413,7 +432,6 @@ export function useWebRTCChess() {
         if (localStreamRef.current) {
           attachMediaHandlers(call, localStreamRef.current);
         } else {
-          // Get mic if not already acquired
           navigator.mediaDevices.getUserMedia({ audio: true, video: false })
             .then((stream) => {
               localStreamRef.current = stream;
@@ -422,7 +440,7 @@ export function useWebRTCChess() {
             })
             .catch((err) => {
               console.warn('[Voice] Mic not available:', err);
-              call.answer(); // answer without stream
+              call.answer();
             });
         }
       });
@@ -442,8 +460,8 @@ export function useWebRTCChess() {
    * 4. Make voice call to host
    */
   const joinRoom = useCallback(async (code) => {
-    const upperCode = code.trim().toUpperCase();
-    if (!upperCode) return;
+    const trimmedCode = code.trim();
+    if (!trimmedCode) return;
 
     setConnectionStatus(STATUS.INITIALIZING);
     setStatusMessage('Looking up room...');
@@ -456,22 +474,31 @@ export function useWebRTCChess() {
     setBlackTime(INITIAL_TIME_MS);
 
     try {
-      // Fetch host peer ID from signaling server
-      const res = await fetch(`${SIGNALING_BASE}/join-room/${upperCode}`);
-      if (!res.ok) {
-        const { error } = await res.json();
-        throw new Error(error || 'Room not found');
-      }
-      const { peerId: hostPeerId } = await res.json();
+      let hostPeerId;
 
-      setRoomCode(upperCode);
+      if (USE_BACKEND) {
+        // Local dev: resolve room code → peer ID via Express backend
+        const upperCode = trimmedCode.toUpperCase();
+        const res = await fetch(`${SIGNALING_BASE}/join-room/${upperCode}`);
+        if (!res.ok) {
+          const { error } = await res.json();
+          throw new Error(error || 'Room not found');
+        }
+        ({ peerId: hostPeerId } = await res.json());
+        setRoomCode(upperCode);
+      } else {
+        // GitHub Pages / no backend: the code IS the peer ID
+        hostPeerId = trimmedCode;
+        setRoomCode(trimmedCode);
+      }
+
       setRemotePeerId(hostPeerId);
       setPlayerRole('black');
-      playerRoleRef.current = 'black'; // set ref immediately (don't wait for useEffect)
+      playerRoleRef.current = 'black';
       setConnectionStatus(STATUS.CONNECTING);
       setStatusMessage('Connecting to opponent...');
 
-      const myId = await initPeer();
+      await initPeer();
 
       // Open data connection to host
       const conn = peerRef.current.connect(hostPeerId, {
@@ -499,17 +526,10 @@ export function useWebRTCChess() {
           }
         });
 
-        call.on('close', () => {
-          setRemoteStream(null);
-          setVoiceActive(false);
-        });
-
-        call.on('error', (err) => {
-          console.error('[Voice call] Error:', err);
-        });
+        call.on('close', () => { setRemoteStream(null); setVoiceActive(false); });
+        call.on('error', (err) => { console.error('[Voice call] Error:', err); });
       } catch (micErr) {
         console.warn('[Voice] Mic unavailable:', micErr);
-        // Continue without voice
       }
 
     } catch (err) {

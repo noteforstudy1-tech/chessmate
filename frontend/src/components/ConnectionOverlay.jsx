@@ -120,23 +120,41 @@ export default function ConnectionOverlay({
         {status === STATUS.WAITING && roomCode && (
           <div className="w-full">
             <p className="text-chess-muted text-xs text-center mb-2 uppercase tracking-widest">
-              Share this code with your opponent
+              Share this with your opponent
             </p>
-            <div className="flex items-center gap-2">
-              <div className="flex-1 text-center py-3 px-4 rounded-xl bg-chess-darker border border-chess-accent/40 font-mono text-2xl font-bold tracking-widest text-chess-accent glow-accent">
-                {roomCode}
+            {roomCode.length <= 8 ? (
+              <div className="flex items-center gap-2">
+                <div className="flex-1 text-center py-3 px-4 rounded-xl bg-chess-darker border border-chess-accent/40 font-mono text-2xl font-bold tracking-widest text-chess-accent glow-accent">
+                  {roomCode}
+                </div>
+                <button
+                  id="copy-room-code-btn"
+                  className="btn-ghost py-3 px-3"
+                  onClick={() => navigator.clipboard.writeText(roomCode)}
+                  title="Copy to clipboard"
+                >
+                  <svg xmlns="http://www.w3.org/2000/svg" className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                  </svg>
+                </button>
               </div>
-              <button
-                id="copy-room-code-btn"
-                className="btn-ghost py-3 px-3 text-xs"
-                onClick={() => navigator.clipboard.writeText(roomCode)}
-                title="Copy to clipboard"
-              >
-                <svg xmlns="http://www.w3.org/2000/svg" className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
-                </svg>
-              </button>
-            </div>
+            ) : (
+              <div className="flex flex-col gap-2">
+                <div className="py-2 px-3 rounded-xl bg-chess-darker border border-chess-accent/40 font-mono text-xs text-chess-accent break-all leading-relaxed text-center">
+                  {roomCode}
+                </div>
+                <button
+                  id="copy-room-code-btn"
+                  className="btn-primary w-full py-2.5 text-sm"
+                  onClick={() => navigator.clipboard.writeText(roomCode)}
+                >
+                  <svg xmlns="http://www.w3.org/2000/svg" className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                  </svg>
+                  Copy Peer ID
+                </button>
+              </div>
+            )}
             <div className="mt-3 flex gap-1 justify-center">
               {[0, 1, 2].map(i => (
                 <span

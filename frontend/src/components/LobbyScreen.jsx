@@ -152,15 +152,14 @@ export default function LobbyScreen({ onCreateRoom, onJoinRoom, isLoading, error
                   <input
                     id="join-code-input"
                     type="text"
-                    className="input-field text-center text-2xl font-bold tracking-[0.3em] uppercase py-4"
-                    placeholder="XXXXXX"
+                    className="input-field text-center font-bold uppercase py-4 tracking-widest text-lg"
+                    placeholder="Room code or Peer ID"
                     value={joinCode}
-                    onChange={(e) => setJoinCode(e.target.value.toUpperCase().slice(0, 6))}
-                    maxLength={6}
+                    onChange={(e) => setJoinCode(e.target.value.trim())}
                     autoComplete="off"
                     spellCheck={false}
                   />
-                  <p className="text-chess-muted/60 text-xs text-center mt-2">6-character room code</p>
+                  <p className="text-chess-muted/60 text-xs text-center mt-2">6-char code (local) or full Peer ID (GitHub Pages)</p>
                 </div>
                 <button
                   id="join-room-btn"
@@ -168,7 +167,7 @@ export default function LobbyScreen({ onCreateRoom, onJoinRoom, isLoading, error
                   className={`btn-primary w-full py-4 text-base ${
                     isLoading || joinCode.length !== 6 ? 'opacity-60 cursor-not-allowed' : ''
                   }`}
-                  disabled={isLoading || joinCode.length !== 6}
+                  disabled={isLoading || joinCode.length < 6}
                 >
                   {isLoading ? (
                     <>
