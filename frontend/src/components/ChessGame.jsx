@@ -72,7 +72,7 @@ export default function ChessGame({
   onResign,
   onDisconnect,
 }) {
-  const [showSidebar, setShowSidebar] = useState(true);
+  const [showSidebar, setShowSidebar] = useState(() => typeof window !== 'undefined' && window.innerWidth >= 1280);
   const isConnected = connectionStatus === STATUS.CONNECTED;
   const isDisabled = !isConnected || !!gameOver;
 
@@ -81,13 +81,13 @@ export default function ChessGame({
   const myTime = playerRole === 'white' ? whiteTime : blackTime;
 
   return (
-    <div className="flex h-full w-full bg-chess-darker">
+    <div className="flex h-full w-full bg-chess-darker relative overflow-hidden">
       {/* ── Left: Board + Player Cards ── */}
-      <div className="flex flex-col flex-1 min-w-0 p-4 gap-3">
+      <div className="flex flex-col flex-1 min-w-0 p-2 sm:p-4 gap-2 sm:gap-3 overflow-y-auto overflow-x-hidden">
         {/* Top bar */}
         <div className="flex items-center gap-2 flex-shrink-0">
           {/* Room info */}
-          <div className="flex items-center gap-2 glass-panel px-3 py-2">
+          <div className="hidden sm:flex items-center gap-2 glass-panel px-3 py-2">
             <span className="text-chess-muted text-xs uppercase tracking-widest">Room</span>
             <span className="font-mono text-sm font-bold text-chess-accent">{roomCode}</span>
           </div>
@@ -152,8 +152,8 @@ export default function ChessGame({
         />
 
         {/* Chess Board */}
-        <div className="flex-1 flex items-center justify-center min-h-0">
-          <div className="w-full max-w-[min(100%,calc(100vh-280px))] aspect-square">
+        <div className="flex-1 flex items-center justify-center min-h-0 py-1">
+          <div className="w-full max-w-[min(100%,calc(100vh-240px))] aspect-square">
             <ChessBoard
               fen={fen}
               game={game}
@@ -185,18 +185,36 @@ export default function ChessGame({
         </div>
       </div>
 
-      {/* ── Right: Chat Sidebar ── */}
+      {/* ── Right: Chat Sidebar (Off-canvas on mobile) ── */}
       <div
-        className={`flex-shrink-0 w-80 p-4 pl-0 transition-all duration-300 ${
-          showSidebar ? 'block' : 'hidden xl:block'
+        className={`fixed xl:static inset-y-0 right-0 z-30 w-80 p-4 xl:pl-0 transition-transform duration-300 bg-chess-darker xl:bg-transparent shadow-2xl xl:shadow-none ${
+          showSidebar ? 'translate-x-0' : 'translate-x-full xl:translate-x-0 xl:hidden'
         }`}
       >
-        <ChatSidebar
-          messages={chatMessages}
-          onSend={onSendChat}
-          disabled={!isConnected}
-        />
+        <div className="h-full relative pt-8 xl:pt-0">
+          {/* Mobile close button */}
+          <button
+            className="absolute top-0 right-0 btn-ghost p-2 xl:hidden z-10"
+            onClick={() => setShowSidebar(false)}
+            title="Close chat"
+          >
+            ✕
+          </button>
+          <ChatSidebar
+            messages={chatMessages}
+            onSend={onSendChat}
+            disabled={!isConnected}
+          />
+        </div>
       </div>
+
+      {/* Backdrop for mobile sidebar */}
+      {showSidebar && (
+        <div
+          className="fixed inset-0 bg-black/50 z-20 xl:hidden animate-fade-in backdrop-blur-sm"
+          onClick={() => setShowSidebar(false)}
+        />
+      )}
 
       {/* Game over modal */}
       <GameOverModal
