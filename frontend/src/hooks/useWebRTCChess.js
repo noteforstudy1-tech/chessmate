@@ -322,14 +322,27 @@ export function useWebRTCChess() {
         peerRef.current.destroy();
       }
 
-      const peer = new Peer({
+      // Generate a short 6-character ID if we are not using the backend
+      // so that the peer ID itself can serve as a friendly room code.
+      let customId = undefined;
+      if (!USE_BACKEND) {
+        const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
+        customId = '';
+        for (let i = 0; i < 6; i++) {
+          customId += chars.charAt(Math.floor(Math.random() * chars.length));
+        }
+      }
+
+      const config = {
         config: {
           iceServers: [
             { urls: 'stun:stun.l.google.com:19302' },
             { urls: 'stun:stun1.l.google.com:19302' },
           ],
         },
-      });
+      };
+
+      const peer = customId ? new Peer(customId, config) : new Peer(config);
 
       peerRef.current = peer;
 
@@ -392,14 +405,9 @@ export function useWebRTCChess() {
         if (!res.ok) throw new Error('Failed to create room on server');
         ({ roomCode: code } = await res.json());
       } else {
-        // GitHub Pages / no backend: peer ID IS the room code
-        // Show first 6 uppercase alphanumeric chars for readability
-        code = peerId.replace(/[^A-Z0-9]/gi, '').slice(0, 6).toUpperCase()
-          || peerId.slice(0, 6).toUpperCase();
-        // Store full peerId so joiner can look it up
-        // We encode it: roomCode=shortCode, but joiner gets full peerId via URL share
-        // Simplest approach: room code = full peerId (user copies it)
-        code = peerId; // joiner pastes the full peer ID
+        // GitHub Pages / no backend: peer ID IS the room code.
+        // Because initPeer requested a 6-char customId, peerId will be that short code.
+        code = peerId;
       }
 
       setRoomCode(code);
