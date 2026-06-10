@@ -67,6 +67,7 @@ export default function App() {
     sendChatMessage,
     toggleMute,
     resign,
+    rematch,
     disconnect,
     startVoice,
   } = useWebRTCChess();
@@ -113,6 +114,7 @@ export default function App() {
           connectionStatus={connectionStatus}
           roomCode={roomCode}
           onResign={resign}
+          onRematch={rematch}
           onDisconnect={disconnect}
           isDark={isDark}
           onToggleTheme={toggleTheme}

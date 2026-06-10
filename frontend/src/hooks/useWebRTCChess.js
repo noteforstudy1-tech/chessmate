@@ -19,6 +19,7 @@ export const MSG = {
   CHAT: 'chat',
   SYNC: 'sync',
   RESIGN: 'resign',
+  REMATCH: 'rematch',
   PING: 'ping',
   PONG: 'pong',
 };
@@ -225,6 +226,18 @@ export function useWebRTCChess() {
         break;
       }
 
+      case MSG.REMATCH: {
+        // Opponent accepted rematch — reset game state, keep connection alive
+        gameRef.current = new Chess();
+        setFen(gameRef.current.fen());
+        setGameOver(null);
+        setWhiteTime(INITIAL_TIME_MS);
+        setBlackTime(INITIAL_TIME_MS);
+        setActiveColor('white');
+        startClock();
+        break;
+      }
+
       case MSG.PING: {
         sendData(MSG.PONG);
         break;
@@ -233,7 +246,7 @@ export function useWebRTCChess() {
       default:
         break;
     }
-  }, [playerRole, sendData, stopClock]);
+  }, [playerRole, sendData, stopClock, startClock]);
 
   // ── Check game over ───────────────────────────────────────────────────────
   const checkGameOver = useCallback(() => {
@@ -621,6 +634,21 @@ export function useWebRTCChess() {
   }, [sendData, playerRole, stopClock]);
 
   /**
+   * Rematch — reset the board over the existing connection, no disconnect.
+   * Sends MSG.REMATCH so the opponent's game also resets.
+   */
+  const rematch = useCallback(() => {
+    gameRef.current = new Chess();
+    setFen(gameRef.current.fen());
+    setGameOver(null);
+    setWhiteTime(INITIAL_TIME_MS);
+    setBlackTime(INITIAL_TIME_MS);
+    setActiveColor('white');
+    startClock();
+    sendData(MSG.REMATCH);
+  }, [sendData, startClock]);
+
+  /**
    * Disconnect and reset everything
    */
   const disconnect = useCallback(async () => {
@@ -695,6 +723,7 @@ export function useWebRTCChess() {
     sendChatMessage,
     toggleMute,
     resign,
+    rematch,
     disconnect,
     startVoice,
   };

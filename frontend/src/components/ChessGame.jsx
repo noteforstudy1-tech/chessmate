@@ -1,7 +1,7 @@
 /**
  * ChessGame.jsx
- * Main game layout: board center, chat sidebar, player cards, voice panel.
- * Features: theme toggle, rematch option, move history + captured pieces panel.
+ * Main game layout: board center, tabbed sidebar (chat + moves), player cards.
+ * Fixes: proper rematch (no disconnect), board sizing, reactive move history.
  */
 import React, { useState } from 'react';
 import ChessBoard from './ChessBoard';
@@ -21,13 +21,11 @@ function ThemeToggle({ isDark, onToggle }) {
       title={isDark ? 'Switch to Light Mode' : 'Switch to Dark Mode'}
     >
       {isDark ? (
-        /* Sun icon */
         <svg xmlns="http://www.w3.org/2000/svg" className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
             d="M12 3v1m0 16v1m8.485-8.485h-1M4.515 12h-1m14.142-5.657-.707.707M6.05 17.95l-.707.707M17.95 17.95l-.707-.707M6.05 6.05l-.707-.707M12 5a7 7 0 100 14A7 7 0 0012 5z" />
         </svg>
       ) : (
-        /* Moon icon */
         <svg xmlns="http://www.w3.org/2000/svg" className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
             d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z" />
@@ -38,15 +36,17 @@ function ThemeToggle({ isDark, onToggle }) {
 }
 
 // ── Game Over Modal ───────────────────────────────────────────────────────────
-function GameOverModal({ gameOver, playerRole, onPlayAgain, onLeave }) {
+function GameOverModal({ gameOver, playerRole, onRematch, onLeave }) {
   if (!gameOver) return null;
 
   const isWinner = gameOver.result === playerRole;
   const isDraw = gameOver.result === 'draw';
 
   return (
-    <div className="fixed inset-0 z-40 flex items-center justify-center backdrop-blur-sm animate-fade-in"
-      style={{ backgroundColor: 'rgba(8,8,15,0.80)' }}>
+    <div
+      className="fixed inset-0 z-40 flex items-center justify-center backdrop-blur-sm animate-fade-in"
+      style={{ backgroundColor: 'rgba(8,8,15,0.80)' }}
+    >
       <div className="glass-panel p-8 max-w-sm w-full mx-4 text-center animate-slide-up">
         <div className="text-6xl mb-4">
           {isDraw ? '🤝' : isWinner ? '🏆' : '💀'}
@@ -60,11 +60,10 @@ function GameOverModal({ gameOver, playerRole, onPlayAgain, onLeave }) {
           by {gameOver.reason}
         </p>
         <div className="flex gap-3">
-          {/* Rematch button */}
           <button
             id="rematch-btn"
-            className="btn-primary flex-1 gap-2"
-            onClick={onPlayAgain}
+            className="btn-primary flex-1"
+            onClick={onRematch}
           >
             <svg xmlns="http://www.w3.org/2000/svg" className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
@@ -83,44 +82,38 @@ function GameOverModal({ gameOver, playerRole, onPlayAgain, onLeave }) {
 
 // ── Main Component ────────────────────────────────────────────────────────────
 export default function ChessGame({
-  // Board
   fen,
   game,
   playerRole,
   onMove,
   gameOver,
-
-  // Players
   myPeerId,
   remotePeerId,
   whiteTime,
   blackTime,
   activeColor,
-
-  // Chat
   chatMessages,
   onSendChat,
-
-  // Voice
   isMuted,
   micVolume,
   voiceActive,
   remoteAudioRef,
   onToggleMute,
   onStartVoice,
-
-  // Meta
   connectionStatus,
   roomCode,
   onResign,
+  onRematch,
   onDisconnect,
-
-  // Theme
   isDark,
   onToggleTheme,
 }) {
-  const [showSidebar, setShowSidebar] = useState(() => typeof window !== 'undefined' && window.innerWidth >= 1280);
+  // Sidebar always visible on xl+; toggle-able on smaller screens
+  const [showSidebar, setShowSidebar] = useState(
+    () => typeof window !== 'undefined' && window.innerWidth >= 1280
+  );
   const [activePanel, setActivePanel] = useState('chat'); // 'chat' | 'moves'
+
   const isConnected = connectionStatus === STATUS.CONNECTED;
   const isDisabled = !isConnected || !!gameOver;
 
@@ -128,77 +121,64 @@ export default function ChessGame({
   const opponentTime = opponentRole === 'white' ? whiteTime : blackTime;
   const myTime = playerRole === 'white' ? whiteTime : blackTime;
 
-  // Rematch handler: disconnect and reconnect
-  const handleRematch = () => {
-    onDisconnect();
-  };
-
   return (
-    <div className="flex h-full w-full relative overflow-hidden"
-      style={{ backgroundColor: 'var(--bg-secondary)' }}>
-      {/* ── Left: Board + Player Cards ── */}
-      <div className="flex flex-col flex-1 min-w-0 p-2 sm:p-4 gap-2 sm:gap-3 overflow-y-auto overflow-x-hidden">
-        {/* Top bar */}
-        <div className="flex items-center gap-2 flex-shrink-0">
-          {/* Room info */}
-          <div className="hidden sm:flex items-center gap-2 glass-panel px-3 py-2">
+    <div
+      className="flex h-full w-full relative overflow-hidden"
+      style={{ backgroundColor: 'var(--bg-secondary)' }}
+    >
+      {/* ── Left: Board + Player Cards ─────────────────────────────────── */}
+      {/*
+        CRITICAL LAYOUT RULES:
+        - No overflow-y on this column; everything must fit in the viewport
+        - Board uses flex-1 + min-h-0 so it shrinks to available space
+        - Board inner div uses maxHeight:'100%' + aspect-ratio to stay square
+      */}
+      <div className="flex flex-col flex-1 min-w-0 min-h-0 p-2 sm:p-3 gap-2">
+
+        {/* ── Top bar ── */}
+        <div className="flex items-center gap-1.5 flex-shrink-0">
+          <div className="hidden sm:flex items-center gap-2 glass-panel px-3 py-1.5">
             <span className="text-chess-muted text-xs uppercase tracking-widest">Room</span>
             <span className="font-mono text-sm font-bold text-chess-accent">{roomCode}</span>
           </div>
 
-          {/* Status dot */}
-          <div className="flex items-center gap-1.5 glass-panel px-3 py-2">
-            <span className={`w-2 h-2 rounded-full ${isConnected ? 'bg-chess-green animate-pulse' : 'bg-chess-red'}`} />
-            <span className="text-xs text-chess-muted">
-              {isConnected ? 'Connected' : 'Offline'}
-            </span>
+          <div className="flex items-center gap-1.5 glass-panel px-3 py-1.5">
+            <span className={`w-2 h-2 rounded-full flex-shrink-0 ${isConnected ? 'bg-chess-green animate-pulse' : 'bg-chess-red'}`} />
+            <span className="text-xs text-chess-muted">{isConnected ? 'Connected' : 'Offline'}</span>
           </div>
 
           <div className="flex-1" />
 
-          {/* Theme toggle */}
           <ThemeToggle isDark={isDark} onToggle={onToggleTheme} />
 
-          {/* Resign */}
           {!gameOver && isConnected && (
-            <button
-              id="resign-btn"
-              className="btn-danger"
-              onClick={onResign}
-            >
-              <svg xmlns="http://www.w3.org/2000/svg" className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <button id="resign-btn" className="btn-danger py-1.5 px-3 text-xs" onClick={onResign}>
+              <svg xmlns="http://www.w3.org/2000/svg" className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 21v-4m0 0V5a2 2 0 012-2h6.5l1 1H21l-3 6 3 6h-8.5l-1-1H5a2 2 0 00-2 2zm9-13.5V9" />
               </svg>
               Resign
             </button>
           )}
 
-          {/* Leave */}
-          <button
-            id="leave-btn"
-            className="btn-ghost py-2 px-3"
-            onClick={onDisconnect}
-            title="Leave game"
-          >
+          <button id="leave-btn" className="btn-ghost py-1.5 px-3" onClick={onDisconnect} title="Leave game">
             <svg xmlns="http://www.w3.org/2000/svg" className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
             </svg>
           </button>
 
-          {/* Toggle sidebar on mobile */}
           <button
             id="toggle-sidebar-btn"
-            className="btn-ghost py-2 px-3 xl:hidden"
+            className="btn-ghost py-1.5 px-3 xl:hidden"
             onClick={() => setShowSidebar(s => !s)}
             title="Toggle panel"
           >
             <svg xmlns="http://www.w3.org/2000/svg" className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
             </svg>
           </button>
         </div>
 
-        {/* Opponent card */}
+        {/* ── Opponent card ── */}
         <PlayerCard
           peerId={remotePeerId}
           role={opponentRole}
@@ -208,9 +188,24 @@ export default function ChessGame({
           gameOver={gameOver}
         />
 
-        {/* Chess Board */}
-        <div className="flex-1 flex items-center justify-center min-h-0 py-1">
-          <div className="w-full max-w-[min(100%,calc(100vh-240px))] aspect-square">
+        {/* ── Chess Board ── flex-1 fills remaining height, min-h-0 allows shrink */}
+        <div className="flex-1 min-h-0 flex items-center justify-center">
+          {/*
+            Inner wrapper: square that fits BOTH the available width and height.
+            - width: 100% of parent (fills horizontally)
+            - maxHeight: 100% (won't overflow vertical space)
+            - aspect-ratio 1/1 makes it square, choosing the smaller of w/h
+          */}
+          <div
+            style={{
+              width: '100%',
+              maxHeight: '100%',
+              aspectRatio: '1 / 1',
+              /* Clamp to the smaller dimension */
+              maxWidth: 'min(100%, calc(var(--board-max, 100%)))',
+            }}
+            className="relative"
+          >
             <ChessBoard
               fen={fen}
               game={game}
@@ -222,7 +217,7 @@ export default function ChessGame({
           </div>
         </div>
 
-        {/* My card + Voice */}
+        {/* ── My card + Voice ── */}
         <div className="flex flex-col gap-2 flex-shrink-0">
           <PlayerCard
             peerId={myPeerId}
@@ -243,76 +238,74 @@ export default function ChessGame({
         </div>
       </div>
 
-      {/* ── Right: Tabbed Sidebar (Chat + Move History) ── */}
+      {/* ── Right: Tabbed Sidebar ─────────────────────────────────────── */}
       <div
-        className={`fixed xl:static inset-y-0 right-0 z-30 w-80 p-4 xl:pl-0 transition-transform duration-300 xl:bg-transparent shadow-2xl xl:shadow-none ${
-          showSidebar ? 'translate-x-0' : 'translate-x-full xl:translate-x-0 xl:hidden'
-        }`}
-        style={{ backgroundColor: showSidebar ? 'var(--bg-secondary)' : undefined }}
+        className={`
+          fixed xl:static inset-y-0 right-0 z-30
+          w-80 xl:w-72 2xl:w-80
+          flex flex-col
+          p-3 xl:pl-0
+          transition-transform duration-300
+          shadow-2xl xl:shadow-none
+          ${showSidebar ? 'translate-x-0' : 'translate-x-full xl:translate-x-0 xl:hidden'}
+        `}
+        style={{ backgroundColor: 'var(--bg-secondary)' }}
       >
-        <div className="h-full relative flex flex-col pt-8 xl:pt-0">
-          {/* Mobile close button */}
+        {/* Mobile close button */}
+        <button
+          className="self-end btn-ghost p-2 xl:hidden mb-1"
+          onClick={() => setShowSidebar(false)}
+          title="Close"
+        >✕</button>
+
+        {/* Tab switcher */}
+        <div className="glass-panel flex p-1 gap-1 flex-shrink-0 mb-2">
           <button
-            className="absolute top-0 right-0 btn-ghost p-2 xl:hidden z-10"
-            onClick={() => setShowSidebar(false)}
-            title="Close panel"
+            id="tab-chat-btn"
+            className={`flex-1 py-2 text-xs font-semibold rounded-xl transition-all duration-200 flex items-center justify-center gap-1.5 ${
+              activePanel === 'chat' ? 'bg-chess-accent text-white shadow-md' : ''
+            }`}
+            style={activePanel !== 'chat' ? { color: 'var(--text-muted)' } : {}}
+            onClick={() => setActivePanel('chat')}
           >
-            ✕
+            <svg xmlns="http://www.w3.org/2000/svg" className="w-3.5 h-3.5 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
+            </svg>
+            Chat
           </button>
+          <button
+            id="tab-moves-btn"
+            className={`flex-1 py-2 text-xs font-semibold rounded-xl transition-all duration-200 flex items-center justify-center gap-1.5 ${
+              activePanel === 'moves' ? 'bg-chess-accent text-white shadow-md' : ''
+            }`}
+            style={activePanel !== 'moves' ? { color: 'var(--text-muted)' } : {}}
+            onClick={() => setActivePanel('moves')}
+          >
+            <svg xmlns="http://www.w3.org/2000/svg" className="w-3.5 h-3.5 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
+            </svg>
+            Moves
+          </button>
+        </div>
 
-          {/* Tab switcher */}
-          <div className="glass-panel flex mb-3 p-1 gap-1 flex-shrink-0">
-            <button
-              id="tab-chat-btn"
-              className={`flex-1 py-2 text-xs font-semibold rounded-xl transition-all duration-200 flex items-center justify-center gap-1.5 ${
-                activePanel === 'chat'
-                  ? 'bg-chess-accent text-white shadow-md'
-                  : 'text-chess-muted hover:text-chess-light'
-              }`}
-              style={activePanel !== 'chat' ? { color: 'var(--text-muted)' } : {}}
-              onClick={() => setActivePanel('chat')}
-            >
-              <svg xmlns="http://www.w3.org/2000/svg" className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
-              </svg>
-              Chat
-            </button>
-            <button
-              id="tab-moves-btn"
-              className={`flex-1 py-2 text-xs font-semibold rounded-xl transition-all duration-200 flex items-center justify-center gap-1.5 ${
-                activePanel === 'moves'
-                  ? 'bg-chess-accent text-white shadow-md'
-                  : 'text-chess-muted hover:text-chess-light'
-              }`}
-              style={activePanel !== 'moves' ? { color: 'var(--text-muted)' } : {}}
-              onClick={() => setActivePanel('moves')}
-            >
-              <svg xmlns="http://www.w3.org/2000/svg" className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
-              </svg>
-              Moves
-            </button>
-          </div>
-
-          {/* Panel content */}
-          <div className="flex-1 min-h-0">
-            {activePanel === 'chat' ? (
-              <ChatSidebar
-                messages={chatMessages}
-                onSend={onSendChat}
-                disabled={!isConnected}
-              />
-            ) : (
-              <MoveHistoryPanel
-                game={game}
-                playerRole={playerRole}
-              />
-            )}
-          </div>
+        {/* Panel content — takes remaining sidebar height */}
+        <div className="flex-1 min-h-0">
+          {activePanel === 'chat' ? (
+            <ChatSidebar
+              messages={chatMessages}
+              onSend={onSendChat}
+              disabled={!isConnected}
+            />
+          ) : (
+            <MoveHistoryPanel
+              game={game}
+              fen={fen}
+            />
+          )}
         </div>
       </div>
 
-      {/* Backdrop for mobile sidebar */}
+      {/* Mobile backdrop */}
       {showSidebar && (
         <div
           className="fixed inset-0 bg-black/50 z-20 xl:hidden animate-fade-in backdrop-blur-sm"
@@ -324,7 +317,7 @@ export default function ChessGame({
       <GameOverModal
         gameOver={gameOver}
         playerRole={playerRole}
-        onPlayAgain={handleRematch}
+        onRematch={onRematch}
         onLeave={onDisconnect}
       />
     </div>

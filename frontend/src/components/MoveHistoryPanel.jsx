@@ -1,171 +1,189 @@
 /**
  * MoveHistoryPanel.jsx
  * Displays move history in algebraic notation and captured pieces per side.
+ * Accepts `fen` prop so React re-renders whenever a move is made.
  */
 import React, { useEffect, useRef } from 'react';
 
-// Piece unicode symbols
+// Unicode piece symbols  (color + type key)
 const PIECE_SYMBOLS = {
-  wP: '♙', wN: '♘', wB: '♗', wR: '♖', wQ: '♕', wK: '♔',
   bP: '♟', bN: '♞', bB: '♝', bR: '♜', bQ: '♛', bK: '♚',
+  wP: '♙', wN: '♘', wB: '♗', wR: '♖', wQ: '♕', wK: '♔',
 };
 
-// Piece material values for sorting display
-const PIECE_VALUES = { q: 9, r: 5, b: 3, n: 3, p: 1 };
+// Material value for sorting captured pieces display (highest first)
+const PIECE_VALUE = { q: 9, r: 5, b: 3, n: 3, p: 1 };
 
-function getCapturedPieces(game) {
+// Derive captured pieces from game history
+function getCaptured(game) {
   const history = game.history({ verbose: true });
-  const captured = { white: [], black: [] }; // captured BY white, BY black
+  const byWhite = []; // pieces captured by white (i.e. black pieces)
+  const byBlack = []; // pieces captured by black (i.e. white pieces)
 
-  history.forEach((move) => {
-    if (move.captured) {
-      const capturingColor = move.color === 'w' ? 'white' : 'black';
-      captured[capturingColor].push(move.captured);
-    }
+  history.forEach((m) => {
+    if (!m.captured) return;
+    if (m.color === 'w') byWhite.push(m.captured);
+    else byBlack.push(m.captured);
   });
 
-  return captured;
+  return { byWhite, byBlack };
 }
 
-function CapturedPieces({ pieces, capturer, label }) {
-  // capturer='white' means white made captures so they captured black pieces (symbolKey='b')
-  const symbolKey = capturer === 'white' ? 'b' : 'w';
-  const sorted = [...pieces].sort((a, b) => (PIECE_VALUES[b] || 0) - (PIECE_VALUES[a] || 0));
-
-  if (sorted.length === 0) return null;
+// Render a row of captured pieces with material score
+function CapturedRow({ label, pieces, symbolColor }) {
+  if (pieces.length === 0) return null;
+  const sorted = [...pieces].sort((a, b) => (PIECE_VALUE[b] || 0) - (PIECE_VALUE[a] || 0));
+  const score = pieces.reduce((s, p) => s + (PIECE_VALUE[p] || 0), 0);
 
   return (
-    <div className="flex items-center gap-1 flex-wrap">
-      <span className="text-xs text-chess-muted font-semibold uppercase tracking-wider w-14 flex-shrink-0">
+    <div className="flex items-center gap-1.5 min-w-0">
+      <span
+        className="text-[10px] font-bold uppercase tracking-widest flex-shrink-0 w-12"
+        style={{ color: 'var(--text-muted)' }}
+      >
         {label}
       </span>
-      <div className="flex flex-wrap gap-0.5">
+      <div className="flex flex-wrap gap-0.5 flex-1 min-w-0">
         {sorted.map((p, i) => (
-          <span key={i} className="text-base leading-none">
-            {PIECE_SYMBOLS[`${symbolKey}${p.toUpperCase()}`] || p}
+          <span key={i} className="text-sm leading-none select-none" title={p.toUpperCase()}>
+            {PIECE_SYMBOLS[`${symbolColor}${p.toUpperCase()}`] || p}
           </span>
         ))}
       </div>
+      {score > 0 && (
+        <span className="text-xs font-bold text-chess-green flex-shrink-0">+{score}</span>
+      )}
     </div>
   );
 }
 
-export default function MoveHistoryPanel({ game }) {
+export default function MoveHistoryPanel({ game, fen }) {
+  // `fen` is only used as a reactive trigger — every time a move is made,
+  // fen changes, React re-renders this component, and we re-read game.history()
   const scrollRef = useRef(null);
   const history = game.history({ verbose: true });
-  const captured = getCapturedPieces(game);
+  const { byWhite, byBlack } = getCaptured(game);
 
-  // Build move pairs: [[w1, b1], [w2, b2], ...]
-  const movePairs = [];
+  // Build move pairs [[whiteMove, blackMove], ...]
+  const pairs = [];
   for (let i = 0; i < history.length; i += 2) {
-    movePairs.push([history[i], history[i + 1]]);
+    pairs.push([history[i], history[i + 1] || null]);
   }
 
-  // Auto-scroll to bottom
+  const lastIdx = history.length - 1;
+
+  // Auto-scroll to latest move
   useEffect(() => {
     if (scrollRef.current) {
       scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
     }
   }, [history.length]);
 
-  const whiteCaptured = captured.white;
-  const blackCaptured = captured.black;
-
-  // Material advantage
-  const whiteMaterial = whiteCaptured.reduce((s, p) => s + (PIECE_VALUES[p] || 0), 0);
-  const blackMaterial = blackCaptured.reduce((s, p) => s + (PIECE_VALUES[p] || 0), 0);
-  const whiteAdv = whiteMaterial - blackMaterial;
-
   return (
-    <div className="glass-panel flex flex-col h-full overflow-hidden">
-      {/* Header */}
-      <div className="flex items-center gap-2 px-4 py-3 border-b border-chess-border flex-shrink-0">
-        <svg xmlns="http://www.w3.org/2000/svg" className="w-4 h-4 text-chess-accent" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+    <div
+      className="glass-panel flex flex-col h-full overflow-hidden"
+    >
+      {/* ── Header ── */}
+      <div
+        className="flex items-center gap-2 px-4 py-2.5 flex-shrink-0"
+        style={{ borderBottom: '1px solid var(--border-color)' }}
+      >
+        <svg xmlns="http://www.w3.org/2000/svg" className="w-4 h-4 text-chess-accent flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
         </svg>
-        <span className="text-sm font-semibold text-chess-light">Move History</span>
-        <span className="ml-auto text-xs text-chess-muted font-mono">
-          {Math.ceil(history.length / 2)} moves
+        <span className="text-sm font-semibold" style={{ color: 'var(--text-primary)' }}>
+          Move History
+        </span>
+        <span className="ml-auto text-xs font-mono" style={{ color: 'var(--text-muted)' }}>
+          {pairs.length} {pairs.length === 1 ? 'move' : 'moves'}
         </span>
       </div>
 
-      {/* Captured pieces section */}
-      {(whiteCaptured.length > 0 || blackCaptured.length > 0) && (
-        <div className="px-4 py-2.5 border-b border-chess-border flex-shrink-0 flex flex-col gap-1.5">
-          {/* White captured black pieces */}
-          <div className="flex items-center gap-1 flex-wrap">
-            {whiteCaptured.length > 0 && (
-              <CapturedPieces pieces={whiteCaptured} capturer="white" label="White +" />
-            )}
-            {whiteAdv > 0 && (
-              <span className="text-xs text-chess-green font-bold ml-1">+{whiteAdv}</span>
-            )}
-          </div>
-          {/* Black captured white pieces */}
-          <div className="flex items-center gap-1 flex-wrap">
-            {blackCaptured.length > 0 && (
-              <CapturedPieces pieces={blackCaptured} capturer="black" label="Black +" />
-            )}
-            {whiteAdv < 0 && (
-              <span className="text-xs text-chess-green font-bold ml-1">+{Math.abs(whiteAdv)}</span>
-            )}
-          </div>
+      {/* ── Captured pieces ── */}
+      {(byWhite.length > 0 || byBlack.length > 0) && (
+        <div
+          className="px-4 py-2 flex flex-col gap-1 flex-shrink-0"
+          style={{ borderBottom: '1px solid var(--border-color)' }}
+        >
+          {/* White captured black pieces → show black symbols */}
+          <CapturedRow label="White +" pieces={byWhite} symbolColor="b" />
+          {/* Black captured white pieces → show white symbols */}
+          <CapturedRow label="Black +" pieces={byBlack} symbolColor="w" />
         </div>
       )}
 
-      {/* Move list */}
-      <div
-        ref={scrollRef}
-        className="flex-1 overflow-y-auto px-3 py-2 space-y-0.5"
-      >
-        {movePairs.length === 0 ? (
-          <div className="flex flex-col items-center justify-center h-full gap-2 text-chess-muted">
-            <span className="text-3xl opacity-30">♟</span>
-            <p className="text-xs text-center">No moves yet</p>
+      {/* ── Move list ── */}
+      <div ref={scrollRef} className="flex-1 overflow-y-auto px-2 py-1.5">
+        {pairs.length === 0 ? (
+          <div className="flex flex-col items-center justify-center h-full gap-2" style={{ color: 'var(--text-muted)' }}>
+            <span className="text-4xl opacity-20 select-none">♟</span>
+            <p className="text-xs">Game not started</p>
           </div>
         ) : (
-          movePairs.map(([white, black], idx) => {
-            const isLastPair = idx === movePairs.length - 1;
-            const lastMoveIdx = history.length - 1;
-            const whiteIsLast = lastMoveIdx === idx * 2;
-            const blackIsLast = lastMoveIdx === idx * 2 + 1;
+          <table className="w-full border-collapse text-xs">
+            <thead>
+              <tr style={{ color: 'var(--text-muted)' }}>
+                <th className="w-8 text-left pb-1 pl-2 font-semibold">#</th>
+                <th className="text-left pb-1 font-semibold">White</th>
+                <th className="text-left pb-1 font-semibold">Black</th>
+              </tr>
+            </thead>
+            <tbody>
+              {pairs.map(([white, black], idx) => {
+                const whiteGlobalIdx = idx * 2;
+                const blackGlobalIdx = idx * 2 + 1;
+                const isLastRow = idx === pairs.length - 1;
 
-            return (
-              <div
-                key={idx}
-                className={`flex items-center gap-1 rounded-lg px-2 py-1 transition-colors ${
-                  isLastPair ? 'bg-chess-accent/10' : 'hover:bg-chess-panel/60'
-                }`}
-              >
-                {/* Move number */}
-                <span className="text-chess-muted text-xs font-mono w-6 flex-shrink-0">
-                  {idx + 1}.
-                </span>
+                return (
+                  <tr
+                    key={idx}
+                    className="rounded-lg"
+                    style={{
+                      backgroundColor: isLastRow ? 'rgba(108,99,255,0.08)' : 'transparent',
+                    }}
+                  >
+                    {/* Move number */}
+                    <td
+                      className="pl-2 py-1 font-mono rounded-l-lg"
+                      style={{ color: 'var(--text-muted)' }}
+                    >
+                      {idx + 1}.
+                    </td>
 
-                {/* White move */}
-                <span
-                  className={`flex-1 text-xs font-mono font-semibold px-1.5 py-0.5 rounded transition-colors ${
-                    whiteIsLast
-                      ? 'bg-chess-accent/25 text-chess-accent'
-                      : 'text-chess-light'
-                  }`}
-                >
-                  {white?.san || ''}
-                </span>
+                    {/* White move */}
+                    <td className="py-1 pr-1">
+                      <span
+                        className="inline-block px-1.5 py-0.5 rounded font-mono font-semibold"
+                        style={{
+                          backgroundColor: lastIdx === whiteGlobalIdx ? 'rgba(108,99,255,0.25)' : 'transparent',
+                          color: lastIdx === whiteGlobalIdx ? '#8b82ff' : 'var(--text-primary)',
+                        }}
+                      >
+                        {white?.san || ''}
+                      </span>
+                    </td>
 
-                {/* Black move */}
-                <span
-                  className={`flex-1 text-xs font-mono font-semibold px-1.5 py-0.5 rounded transition-colors ${
-                    blackIsLast
-                      ? 'bg-chess-accent/25 text-chess-accent'
-                      : 'text-chess-muted'
-                  }`}
-                >
-                  {black?.san || ''}
-                </span>
-              </div>
-            );
-          })
+                    {/* Black move */}
+                    <td className="py-1 rounded-r-lg">
+                      <span
+                        className="inline-block px-1.5 py-0.5 rounded font-mono font-semibold"
+                        style={{
+                          backgroundColor: black && lastIdx === blackGlobalIdx ? 'rgba(108,99,255,0.25)' : 'transparent',
+                          color: black && lastIdx === blackGlobalIdx
+                            ? '#8b82ff'
+                            : black
+                            ? 'var(--text-muted)'
+                            : 'transparent',
+                        }}
+                      >
+                        {black?.san || '—'}
+                      </span>
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
         )}
       </div>
     </div>
