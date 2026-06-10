@@ -1,14 +1,37 @@
 /**
  * App.jsx
  * Root component: orchestrates lobby vs. game view, feeds the useWebRTCChess hook.
+ * Also manages theme (dark/light) toggling.
  */
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { useWebRTCChess, STATUS } from './hooks/useWebRTCChess';
 import LobbyScreen from './components/LobbyScreen';
 import ChessGame from './components/ChessGame';
 import ConnectionOverlay from './components/ConnectionOverlay';
 
 export default function App() {
+  // ── Theme ────────────────────────────────────────────────────────────────
+  const [isDark, setIsDark] = useState(() => {
+    const saved = localStorage.getItem('chessmate-theme');
+    return saved !== 'light'; // default dark
+  });
+
+  useEffect(() => {
+    const html = document.documentElement;
+    if (isDark) {
+      html.classList.remove('light');
+      html.classList.add('dark');
+      localStorage.setItem('chessmate-theme', 'dark');
+    } else {
+      html.classList.remove('dark');
+      html.classList.add('light');
+      localStorage.setItem('chessmate-theme', 'light');
+    }
+  }, [isDark]);
+
+  const toggleTheme = () => setIsDark(prev => !prev);
+
+  // ── WebRTC Chess Hook ─────────────────────────────────────────────────────
   const {
     // Connection state
     connectionStatus,
@@ -53,7 +76,7 @@ export default function App() {
   const isLoading = [STATUS.INITIALIZING, STATUS.CONNECTING].includes(connectionStatus);
 
   return (
-    <div className="h-full w-full overflow-hidden">
+    <div className="h-full w-full overflow-hidden" style={{ backgroundColor: 'var(--bg-primary)', color: 'var(--text-primary)' }}>
       {/* Lobby */}
       {!inGame && (
         <LobbyScreen
@@ -61,6 +84,8 @@ export default function App() {
           onJoinRoom={joinRoom}
           isLoading={isLoading}
           errorMessage={connectionStatus === STATUS.ERROR ? errorMessage : ''}
+          isDark={isDark}
+          onToggleTheme={toggleTheme}
         />
       )}
 
@@ -89,6 +114,8 @@ export default function App() {
           roomCode={roomCode}
           onResign={resign}
           onDisconnect={disconnect}
+          isDark={isDark}
+          onToggleTheme={toggleTheme}
         />
       )}
 

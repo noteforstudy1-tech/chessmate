@@ -23,8 +23,13 @@ export default function PlayerCard({
       className={`flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-300 ${
         isActive && !gameOver
           ? 'bg-chess-accent/10 border border-chess-accent/30'
-          : 'bg-chess-panel/60 border border-chess-border/40'
+          : ''
       }`}
+      style={!(isActive && !gameOver) ? {
+        backgroundColor: 'var(--bg-panel)',
+        border: '1px solid var(--border-color)',
+        opacity: 0.9,
+      } : {}}
     >
       {/* Avatar */}
       <div
@@ -43,7 +48,7 @@ export default function PlayerCard({
       {/* Info */}
       <div className="flex-1 min-w-0">
         <div className="flex items-center gap-2">
-          <span className="text-sm font-semibold text-white truncate">
+          <span className="text-sm font-semibold truncate" style={{ color: 'var(--text-primary)' }}>
             {isYou ? 'You' : 'Opponent'}
           </span>
           <span
@@ -55,7 +60,7 @@ export default function PlayerCard({
             <span className="badge badge-green text-xs">You</span>
           )}
         </div>
-        <div className="text-xs text-chess-muted font-mono truncate mt-0.5">
+        <div className="text-xs font-mono truncate mt-0.5" style={{ color: 'var(--text-muted)' }}>
           {peerId ? peerId.slice(0, 12) + '...' : 'Waiting...'}
         </div>
       </div>
@@ -65,9 +70,9 @@ export default function PlayerCard({
         className={`font-mono text-lg font-bold tabular-nums flex-shrink-0 transition-colors duration-300 ${
           isOut ? 'text-chess-red' :
           isLow ? 'text-chess-gold animate-pulse' :
-          isActive ? 'text-white' :
-          'text-chess-muted'
+          ''
         }`}
+        style={!isOut && !isLow ? { color: isActive ? 'var(--text-primary)' : 'var(--text-muted)' } : {}}
       >
         {formatTime(timeMs)}
       </div>

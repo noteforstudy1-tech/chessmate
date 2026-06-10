@@ -11,7 +11,7 @@ const FEATURES = [
   { icon: '♟', label: 'Full Chess Rules', desc: 'Powered by chess.js engine' },
 ];
 
-export default function LobbyScreen({ onCreateRoom, onJoinRoom, isLoading, errorMessage }) {
+export default function LobbyScreen({ onCreateRoom, onJoinRoom, isLoading, errorMessage, isDark, onToggleTheme }) {
   const [joinCode, setJoinCode] = useState('');
   const [activeTab, setActiveTab] = useState('create'); // 'create' | 'join'
 
@@ -25,8 +25,28 @@ export default function LobbyScreen({ onCreateRoom, onJoinRoom, isLoading, error
   return (
     <div className="min-h-full flex flex-col items-center justify-center p-6 relative overflow-auto">
       {/* Background gradient */}
-      <div className="fixed inset-0 bg-gradient-to-br from-chess-darker via-chess-dark to-[#0a0a1a] pointer-events-none" />
+      <div className="fixed inset-0 pointer-events-none" style={{ background: isDark ? 'linear-gradient(135deg, #08080f, #0d0d14, #0a0a1a)' : 'linear-gradient(135deg, #e8e8f4, #f0f0f8, #eceaf8)' }} />
       <div className="fixed inset-0 noise-bg pointer-events-none" />
+
+      {/* Theme toggle button - top right */}
+      <button
+        id="lobby-theme-toggle-btn"
+        className="fixed top-4 right-4 z-50 btn-ghost py-2 px-3"
+        onClick={onToggleTheme}
+        title={isDark ? 'Switch to Light Mode' : 'Switch to Dark Mode'}
+      >
+        {isDark ? (
+          <svg xmlns="http://www.w3.org/2000/svg" className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
+              d="M12 3v1m0 16v1m8.485-8.485h-1M4.515 12h-1m14.142-5.657-.707.707M6.05 17.95l-.707.707M17.95 17.95l-.707-.707M6.05 6.05l-.707-.707M12 5a7 7 0 100 14A7 7 0 0012 5z" />
+          </svg>
+        ) : (
+          <svg xmlns="http://www.w3.org/2000/svg" className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
+              d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z" />
+          </svg>
+        )}
+      </button>
 
       {/* Floating chess pieces */}
       <div className="fixed inset-0 overflow-hidden pointer-events-none select-none">

@@ -4,6 +4,34 @@
 @tailwind components;
 @tailwind utilities;
 
+/* ── CSS Custom Properties (Dark Mode Defaults) ── */
+:root {
+  --bg-primary:   #0d0d14;
+  --bg-secondary: #08080f;
+  --bg-panel:     #13131f;
+  --border-color: #1e1e2e;
+  --text-primary: #e2e8f0;
+  --text-muted:   #64748b;
+  --scrollbar-track: #13131f;
+  --scrollbar-thumb: #2d2d44;
+  --board-dark:   #312e6d;
+  --board-light:  #b8b1ff;
+}
+
+/* ── Light Mode Overrides ── */
+html.light {
+  --bg-primary:   #f0f0f8;
+  --bg-secondary: #e8e8f4;
+  --bg-panel:     #ffffff;
+  --border-color: #d1d5e8;
+  --text-primary: #1a1a2e;
+  --text-muted:   #6b7280;
+  --scrollbar-track: #e8e8f4;
+  --scrollbar-thumb: #c4c4d8;
+  --board-dark:   #7c78d8;
+  --board-light:  #dddaff;
+}
+
 @layer base {
   * {
     box-sizing: border-box;
@@ -19,10 +47,11 @@
 
   body {
     font-family: 'Inter', system-ui, sans-serif;
-    background-color: #0d0d14;
-    color: #e2e8f0;
+    background-color: var(--bg-primary);
+    color: var(--text-primary);
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
+    transition: background-color 0.3s ease, color 0.3s ease;
   }
 
   ::-webkit-scrollbar {
@@ -30,10 +59,10 @@
     height: 4px;
   }
   ::-webkit-scrollbar-track {
-    background: #13131f;
+    background: var(--scrollbar-track);
   }
   ::-webkit-scrollbar-thumb {
-    background: #2d2d44;
+    background: var(--scrollbar-thumb);
     border-radius: 2px;
   }
   ::-webkit-scrollbar-thumb:hover {
@@ -43,7 +72,11 @@
 
 @layer components {
   .glass-panel {
-    @apply bg-chess-panel bg-opacity-80 backdrop-blur-md border border-chess-border rounded-2xl;
+    background-color: var(--bg-panel);
+    border: 1px solid var(--border-color);
+    border-radius: 1rem;
+    backdrop-filter: blur(12px);
+    transition: background-color 0.3s ease, border-color 0.3s ease;
   }
 
   .btn-primary {
@@ -56,11 +89,26 @@
   }
 
   .btn-ghost {
-    @apply inline-flex items-center justify-center gap-2 px-6 py-3 rounded-xl
-           bg-transparent border border-chess-border hover:border-chess-accent
-           text-chess-muted hover:text-white font-semibold text-sm
-           transition-all duration-200
-           active:scale-95 cursor-pointer;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    padding: 0.75rem 1.5rem;
+    border-radius: 0.75rem;
+    background-color: transparent;
+    border: 1px solid var(--border-color);
+    color: var(--text-muted);
+    font-weight: 600;
+    font-size: 0.875rem;
+    transition: all 0.2s ease;
+    cursor: pointer;
+  }
+  .btn-ghost:hover {
+    border-color: #6c63ff;
+    color: var(--text-primary);
+  }
+  .btn-ghost:active {
+    transform: scale(0.95);
   }
 
   .btn-danger {
@@ -72,11 +120,23 @@
   }
 
   .input-field {
-    @apply w-full px-4 py-3 rounded-xl
-           bg-chess-darker border border-chess-border
-           text-white placeholder-chess-muted
-           focus:outline-none focus:border-chess-accent focus:ring-1 focus:ring-chess-accent/50
-           font-mono text-sm transition-all duration-200;
+    width: 100%;
+    padding: 0.75rem 1rem;
+    border-radius: 0.75rem;
+    background-color: var(--bg-secondary);
+    border: 1px solid var(--border-color);
+    color: var(--text-primary);
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.875rem;
+    transition: all 0.2s ease;
+    outline: none;
+  }
+  .input-field::placeholder {
+    color: var(--text-muted);
+  }
+  .input-field:focus {
+    border-color: #6c63ff;
+    box-shadow: 0 0 0 2px rgba(108, 99, 255, 0.25);
   }
 
   .badge {
@@ -104,7 +164,9 @@
   }
 
   .chat-bubble-other {
-    @apply mr-auto bg-chess-border/60 text-chess-light;
+    color: var(--text-primary);
+    background-color: var(--border-color);
+    margin-right: auto;
   }
 }
 
@@ -135,6 +197,48 @@
   .noise-bg {
     background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.03'/%3E%3C/svg%3E");
   }
+}
+
+/* Light mode adaptations for specific components */
+html.light .badge-white {
+  background-color: rgba(0,0,0,0.08);
+  color: #1a1a2e;
+  border-color: rgba(0,0,0,0.15);
+}
+html.light .badge-black {
+  background-color: rgba(0,0,0,0.12);
+  color: #374151;
+  border-color: rgba(0,0,0,0.2);
+}
+html.light .chat-bubble-own {
+  color: #1a1a2e;
+}
+html.light .text-chess-light {
+  color: #1a1a2e !important;
+}
+html.light .text-white {
+  color: #1a1a2e !important;
+}
+html.light .bg-chess-darker {
+  background-color: var(--bg-secondary) !important;
+}
+html.light .bg-chess-dark {
+  background-color: var(--bg-primary) !important;
+}
+html.light .bg-chess-panel {
+  background-color: var(--bg-panel) !important;
+}
+html.light .border-chess-border {
+  border-color: var(--border-color) !important;
+}
+html.light .text-chess-muted {
+  color: #6b7280 !important;
+}
+html.light body {
+  background-color: var(--bg-primary);
+}
+html.light .board-shadow {
+  box-shadow: 0 25px 60px rgba(0,0,0,0.15), 0 0 0 1px rgba(108,99,255,0.2);
 }
 
 /* Chess board coordinate labels */

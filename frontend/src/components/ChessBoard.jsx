@@ -63,6 +63,7 @@ export default function ChessBoard({
   playerRole,
   onMove,
   disabled,
+  isDark = true,
 }) {
   const [selectedSquare, setSelectedSquare] = useState(null);
   const [possibleMoves, setPossibleMoves] = useState({});
@@ -235,8 +236,8 @@ export default function ChessBoard({
         arePiecesDraggable={!disabled}
         customSquareStyles={customSquareStyles}
         customBoardStyle={{ borderRadius: '8px' }}
-        customDarkSquareStyle={{ backgroundColor: '#312e6d' }}
-        customLightSquareStyle={{ backgroundColor: '#b8b1ff' }}
+        customDarkSquareStyle={{ backgroundColor: isDark ? '#312e6d' : '#7c78d8' }}
+        customLightSquareStyle={{ backgroundColor: isDark ? '#b8b1ff' : '#dddaff' }}
         animationDuration={150}
         arePremovesAllowed={false}
       />
