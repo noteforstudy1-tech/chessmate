@@ -133,7 +133,7 @@ export default function ChessGame({
         - Board uses flex-1 + min-h-0 so it shrinks to available space
         - Board inner div uses maxHeight:'100%' + aspect-ratio to stay square
       */}
-      <div className="flex flex-col flex-1 min-w-0 min-h-0 p-2 sm:p-3 gap-2">
+      <div className="flex flex-col flex-1 min-w-0 h-full p-2 sm:p-3 gap-2 overflow-hidden">
 
         {/* ── Top bar ── */}
         <div className="flex items-center gap-1.5 flex-shrink-0">
@@ -188,23 +188,18 @@ export default function ChessGame({
           gameOver={gameOver}
         />
 
-        {/* ── Chess Board ── flex-1 fills remaining height, min-h-0 allows shrink */}
-        <div className="flex-1 min-h-0 flex items-center justify-center">
-          {/*
-            Inner wrapper: square that fits BOTH the available width and height.
-            - width: 100% of parent (fills horizontally)
-            - maxHeight: 100% (won't overflow vertical space)
-            - aspect-ratio 1/1 makes it square, choosing the smaller of w/h
-          */}
+        {/* ── Chess Board ── */}
+        {/*
+          The board must be square and fit in the remaining vertical space.
+          Strategy: cap the width with min(100%, calc(100vh - Xpx)) where X
+          accounts for topbar + both player cards + voice panel + padding.
+          At 730px viewport: 730 - 310 = 420px board. Width is always >> height
+          on desktop, so the height constraint drives the square size.
+        */}
+        <div className="flex-1 min-h-0 flex items-center justify-center overflow-hidden py-1">
           <div
-            style={{
-              width: '100%',
-              maxHeight: '100%',
-              aspectRatio: '1 / 1',
-              /* Clamp to the smaller dimension */
-              maxWidth: 'min(100%, calc(var(--board-max, 100%)))',
-            }}
-            className="relative"
+            className="aspect-square"
+            style={{ width: 'min(100%, calc(100vh - 310px))' }}
           >
             <ChessBoard
               fen={fen}
