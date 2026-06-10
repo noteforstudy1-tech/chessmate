@@ -53,13 +53,13 @@ export default function ConnectionOverlay({
   const isSpinning = [STATUS.INITIALIZING, STATUS.WAITING, STATUS.CONNECTING].includes(status);
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-chess-darker/90 backdrop-blur-md animate-fade-in">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-chess-darker/90 backdrop-blur-md animate-fade-in overflow-y-auto py-4 sm:py-6">
       {/* Floating decorative pieces */}
       <div className="absolute inset-0 overflow-hidden pointer-events-none select-none">
         {['♔', '♕', '♖', '♗', '♘', '♙'].map((piece, i) => (
           <span
             key={i}
-            className="float-piece absolute text-7xl md:text-9xl text-white"
+            className="float-piece absolute text-5xl sm:text-7xl md:text-9xl text-white"
             style={{
               left: `${10 + i * 15}%`,
               top: `${15 + (i % 3) * 25}%`,
@@ -71,12 +71,12 @@ export default function ConnectionOverlay({
       </div>
 
       {/* Card */}
-      <div className="relative glass-panel p-10 flex flex-col items-center gap-6 max-w-sm w-full mx-4 animate-slide-up">
+      <div className="relative glass-panel p-5 sm:p-8 md:p-10 flex flex-col items-center gap-4 sm:gap-6 max-w-sm w-full mx-3 sm:mx-4 animate-slide-up max-h-[90vh] overflow-y-auto connection-scrollbar">
         {/* Spinner / Icon */}
         <div className="relative">
           {isSpinning && (
             <svg
-              className={`connecting-ring w-24 h-24 ${cfg.color}`}
+              className={`connecting-ring w-16 h-16 sm:w-20 sm:h-20 md:w-24 md:h-24 ${cfg.color}`}
               viewBox="0 0 96 96"
               fill="none"
             >
@@ -97,7 +97,7 @@ export default function ConnectionOverlay({
             </svg>
           )}
           <span
-            className={`absolute inset-0 flex items-center justify-center text-4xl ${
+            className={`absolute inset-0 flex items-center justify-center text-2xl sm:text-3xl md:text-4xl ${
               !isSpinning ? 'relative' : ''
             }`}
           >
@@ -107,7 +107,7 @@ export default function ConnectionOverlay({
 
         {/* Title */}
         <div className="text-center">
-          <h2 className={`text-2xl font-bold ${cfg.color}`}>{cfg.title}</h2>
+          <h2 className={`text-xl sm:text-2xl font-bold ${cfg.color}`}>{cfg.title}</h2>
           {statusMessage && (
             <p className="mt-2 text-chess-muted text-sm">{statusMessage}</p>
           )}
@@ -124,12 +124,12 @@ export default function ConnectionOverlay({
             </p>
             {roomCode.length <= 8 ? (
               <div className="flex items-center gap-2">
-                <div className="flex-1 text-center py-3 px-4 rounded-xl bg-chess-darker border border-chess-accent/40 font-mono text-2xl font-bold tracking-widest text-chess-accent glow-accent">
+                <div className="flex-1 text-center py-3 px-3 sm:px-4 rounded-xl bg-chess-darker border border-chess-accent/40 font-mono text-xl sm:text-2xl font-bold tracking-widest text-chess-accent glow-accent">
                   {roomCode}
                 </div>
                 <button
                   id="copy-room-code-btn"
-                  className="btn-ghost py-3 px-3"
+                  className="btn-ghost py-3 px-3 min-w-[44px] min-h-[44px]"
                   onClick={() => navigator.clipboard.writeText(roomCode)}
                   title="Copy to clipboard"
                 >
@@ -171,7 +171,7 @@ export default function ConnectionOverlay({
         {(status === STATUS.ERROR || status === STATUS.DISCONNECTED) && (
           <button
             id="overlay-back-btn"
-            className="btn-ghost w-full"
+            className="btn-ghost w-full min-h-[44px]"
             onClick={onDisconnect}
           >
             ← Back to Lobby

@@ -292,3 +292,25 @@ html.light .board-shadow {
 .float-piece:nth-child(4) { animation-delay: 3s; animation-duration: 9s; }
 .float-piece:nth-child(5) { animation-delay: 0.5s; animation-duration: 6.5s; }
 .float-piece:nth-child(6) { animation-delay: 2.5s; animation-duration: 7.5s; }
+
+/* Connection overlay card scrollbar */
+.connection-scrollbar {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(108, 99, 255, 0.5) transparent;
+}
+.connection-scrollbar::-webkit-scrollbar {
+  width: 5px;
+}
+.connection-scrollbar::-webkit-scrollbar-track {
+  background: transparent;
+  border-radius: 9999px;
+}
+.connection-scrollbar::-webkit-scrollbar-thumb {
+  background: rgba(108, 99, 255, 0.45);
+  border-radius: 9999px;
+  border: 1px solid rgba(108, 99, 255, 0.2);
+}
+.connection-scrollbar::-webkit-scrollbar-thumb:hover {
+  background: rgba(108, 99, 255, 0.8);
+  box-shadow: 0 0 8px rgba(108, 99, 255, 0.6);
+}
