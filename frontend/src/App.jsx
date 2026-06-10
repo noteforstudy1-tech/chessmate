@@ -77,48 +77,52 @@ export default function App() {
   const isLoading = [STATUS.INITIALIZING, STATUS.CONNECTING].includes(connectionStatus);
 
   return (
-    <div className="h-full w-full overflow-hidden" style={{ backgroundColor: 'var(--bg-primary)', color: 'var(--text-primary)' }}>
+    <div className="h-full w-full" style={{ backgroundColor: 'var(--bg-primary)', color: 'var(--text-primary)' }}>
       {/* Lobby */}
       {!inGame && (
-        <LobbyScreen
-          onCreateRoom={createRoom}
-          onJoinRoom={joinRoom}
-          isLoading={isLoading}
-          errorMessage={connectionStatus === STATUS.ERROR ? errorMessage : ''}
-          isDark={isDark}
-          onToggleTheme={toggleTheme}
-        />
+        <div className="h-full w-full overflow-y-auto lobby-scroll">
+          <LobbyScreen
+            onCreateRoom={createRoom}
+            onJoinRoom={joinRoom}
+            isLoading={isLoading}
+            errorMessage={connectionStatus === STATUS.ERROR ? errorMessage : ''}
+            isDark={isDark}
+            onToggleTheme={toggleTheme}
+          />
+        </div>
       )}
 
-      {/* Game */}
+      {/* Game — non-scrolling, fills viewport */}
       {inGame && (
-        <ChessGame
-          fen={fen}
-          game={game}
-          playerRole={playerRole}
-          onMove={makeMove}
-          gameOver={gameOver}
-          myPeerId={myPeerId}
-          remotePeerId={remotePeerId}
-          whiteTime={whiteTime}
-          blackTime={blackTime}
-          activeColor={activeColor}
-          chatMessages={chatMessages}
-          onSendChat={sendChatMessage}
-          isMuted={isMuted}
-          micVolume={micVolume}
-          voiceActive={voiceActive}
-          remoteAudioRef={remoteAudioRef}
-          onToggleMute={toggleMute}
-          onStartVoice={startVoice}
-          connectionStatus={connectionStatus}
-          roomCode={roomCode}
-          onResign={resign}
-          onRematch={rematch}
-          onDisconnect={disconnect}
-          isDark={isDark}
-          onToggleTheme={toggleTheme}
-        />
+        <div className="h-full w-full overflow-hidden">
+          <ChessGame
+            fen={fen}
+            game={game}
+            playerRole={playerRole}
+            onMove={makeMove}
+            gameOver={gameOver}
+            myPeerId={myPeerId}
+            remotePeerId={remotePeerId}
+            whiteTime={whiteTime}
+            blackTime={blackTime}
+            activeColor={activeColor}
+            chatMessages={chatMessages}
+            onSendChat={sendChatMessage}
+            isMuted={isMuted}
+            micVolume={micVolume}
+            voiceActive={voiceActive}
+            remoteAudioRef={remoteAudioRef}
+            onToggleMute={toggleMute}
+            onStartVoice={startVoice}
+            connectionStatus={connectionStatus}
+            roomCode={roomCode}
+            onResign={resign}
+            onRematch={rematch}
+            onDisconnect={disconnect}
+            isDark={isDark}
+            onToggleTheme={toggleTheme}
+          />
+        </div>
       )}
 
       {/* Connection overlay (shown on top of game when not yet connected) */}
