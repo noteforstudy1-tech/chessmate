@@ -293,6 +293,12 @@ html.light .board-shadow {
 .float-piece:nth-child(5) { animation-delay: 0.5s; animation-duration: 6.5s; }
 .float-piece:nth-child(6) { animation-delay: 2.5s; animation-duration: 7.5s; }
 
+/* Connection overlay — outer scrollable container */
+.connection-scroll-outer {
+  -webkit-overflow-scrolling: touch; /* iOS Safari momentum scroll */
+  overscroll-behavior: contain;
+}
+
 /* Connection overlay card scrollbar */
 .connection-scrollbar {
   scrollbar-width: thin;

@@ -53,9 +53,9 @@ export default function ConnectionOverlay({
   const isSpinning = [STATUS.INITIALIZING, STATUS.WAITING, STATUS.CONNECTING].includes(status);
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-chess-darker/90 backdrop-blur-md animate-fade-in overflow-y-auto py-4 sm:py-6">
-      {/* Floating decorative pieces */}
-      <div className="absolute inset-0 overflow-hidden pointer-events-none select-none">
+    <div className="fixed inset-0 z-50 bg-chess-darker/90 backdrop-blur-md animate-fade-in overflow-y-auto connection-scroll-outer">
+      {/* Floating decorative pieces — fixed to viewport so they don't scroll */}
+      <div className="fixed inset-0 overflow-hidden pointer-events-none select-none">
         {['♔', '♕', '♖', '♗', '♘', '♙'].map((piece, i) => (
           <span
             key={i}
@@ -70,8 +70,11 @@ export default function ConnectionOverlay({
         ))}
       </div>
 
-      {/* Card */}
-      <div className="relative glass-panel p-5 sm:p-8 md:p-10 flex flex-col items-center gap-4 sm:gap-6 max-w-sm w-full mx-3 sm:mx-4 animate-slide-up max-h-[90vh] overflow-y-auto connection-scrollbar">
+      {/* Scroll inner wrapper — centers card when content fits, scrolls when it doesn't */}
+      <div className="min-h-full flex items-center justify-center py-4 sm:py-6 px-3 sm:px-4">
+
+        {/* Card */}
+        <div className="relative glass-panel p-5 sm:p-8 md:p-10 flex flex-col items-center gap-4 sm:gap-6 max-w-sm w-full animate-slide-up">
         {/* Spinner / Icon */}
         <div className="relative">
           {isSpinning && (
@@ -177,6 +180,7 @@ export default function ConnectionOverlay({
             ← Back to Lobby
           </button>
         )}
+        </div>
       </div>
     </div>
   );
